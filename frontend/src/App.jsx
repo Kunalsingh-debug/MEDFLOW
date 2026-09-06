@@ -24,6 +24,7 @@ import {
   ArrowRight,
   Check,
   FileText,
+  Heart,
   HeartPulse,
   Lock,
   Mic,
@@ -42,6 +43,7 @@ import {
   Settings2,
   Play,
   Pause,
+  PersonStanding,
   Square,
   Building2,
   Stethoscope,
@@ -72,6 +74,11 @@ const SYSTEM_COLORS = {
   urinary:   { bg: "#ecfeff", iconBg: "#06b6d4", border: "#06b6d4", text: "#0e7490", light: "#cffafe" },
   general:   { bg: "#f0fdf4", iconBg: "#10b981", border: "#10b981", text: "#065f46", light: "#d1fae5" },
 };
+
+function cleanQueueLabel(value) {
+  return String(value || "").replace(/Ã¢â‚¬â€/g, " - ").replace(/Ã‚Â·/g, " - ").replace(/Â·/g, " - ").replace(/Ã¢â‚¬Â¢/g, "-");
+  return <div className="patient-shell">{renderPatientSidebar()}<main className="patient-main patient-section-main"><div className="records-container"><header className="records-header"><div><p className="eyebrow">{t("platform.patientPortal")}</p><h1>{t("auth.profile")}</h1><p>{t("platform.profileDescription")}</p></div><LanguageSwitcher setForm={setForm} /></header><div className="profile-card-grid"><Card><h2>{t("platform.profileInformation")}</h2><p><strong>{t("name")}:</strong> {authenticatedUser?.name || form.name || t("platform.notReported")}</p><p><strong>{t("auth.abha")}:</strong> {maskAbha(authenticatedUser?.abhaId)}</p><p><strong>{t("platform.language")}:</strong> {form.language}</p></Card><Card><h2>Accessibility</h2>{renderAccessibilityControls()}</Card></div></div></main></div>;
+}
 
 function App() {
   const { t } = useTranslation();
@@ -175,7 +182,7 @@ function App() {
   async function loadHospitals() {
     try {
       const data = await queueRequest("/api/hospitals");
-      setHospitals(data.hospitals);
+      setHospitals((data.hospitals || []).map((hospital) => ({ ...hospital, name: cleanQueueLabel(hospital.name), address: cleanQueueLabel(hospital.address) })));
       if (data.hospitals[0]) setSelectedHospitalId((current) => current || data.hospitals[0].id);
     } catch (error) { setQueueError(error.message); }
   }
@@ -203,7 +210,7 @@ function App() {
     try {
       setQueueError("");
       const data = await queueRequest("/api/tokens", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ patientId: authenticatedUser?.patientId, assessmentId, hospitalId: selectedHospitalId, doctorId }) });
-      setActiveToken(data.token);
+      setActiveToken(data.token ? { ...data.token, department: cleanQueueLabel(data.token.department), hospitalName: cleanQueueLabel(data.token.hospitalName) } : data.token);
     } catch (error) { setQueueError(error.message); }
   }
 
@@ -1287,7 +1294,7 @@ function App() {
   function renderSystemIcon(iconName, size = 22) {
     switch (iconName) {
       case "Activity":
-        return <Activity size={size} />;
+        return <Heart size={size} />;
       case "Wind":
         return <Wind size={size} />;
       case "Brain":
@@ -1302,7 +1309,7 @@ function App() {
         return <Droplets size={size} />;
       case "ShieldAlert":
       default:
-        return <ShieldAlert size={size} />;
+        return <PersonStanding size={size} />;
     }
   }
 
@@ -1362,6 +1369,24 @@ function App() {
     Object.assign(paths, { "admin-assessments": "/admin-assessments", "admin-profile": "/admin-profile" });
     if (paths[page]) window.history.replaceState(null, "", paths[page]);
   }, [page]);
+
+  useEffect(() => {
+    const replacements = [["Ã¢â‚¬â€", " - "], ["Ã‚Â·", " - "], ["Â·", " - "], ["Ã¢â‚¬Â¢", " - "], ["â€™", "'"], ["â€¦", "..."]];
+    const normalizeText = (node) => {
+      if (node.nodeType !== Node.TEXT_NODE || !node.nodeValue) return;
+      const normalized = replacements.reduce((value, [broken, clean]) => value.split(broken).join(clean), node.nodeValue);
+      if (normalized !== node.nodeValue) node.nodeValue = normalized;
+    };
+    const normalizePageText = () => {
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) normalizeText(node);
+    };
+    normalizePageText();
+    const observer = new MutationObserver(normalizePageText);
+    observer.observe(document.body, { childList: true, characterData: true, subtree: true });
+    return () => observer.disconnect();
+  }, [page, hospitals, activeToken]);
 
   if (page === "queue-status") {
     return <div className="queue-page public-queue-page"><nav className="navbar"><div className="logo"><div className="logo-icon"><HeartPulse size={20} /></div><span>Med<span>Flow</span></span></div></nav><main className="queue-container"><section className="live-queue-card" aria-live="polite">{platformLoading ? <LoadingState label={t("platform.loadingQueueStatus")} /> : platformError ? <EmptyState title={t("platform.queueUnavailable")} detail={platformError} /> : publicQueueStatus && <><StatusBadge status="live"><Radio size={14} /> {t("queue.live")}</StatusBadge><p className="eyebrow">{publicQueueStatus.hospitalName}</p><h1>{publicQueueStatus.doctorName}</h1><p>{t("queue.status")}: {publicQueueStatus.queueStatus}</p><div className="live-token-row"><div><span>{t("queue.nowServing")}</span><strong>{publicQueueStatus.currentToken || t("platform.notStarted")}</strong></div><div><span>{t("queue.yourToken")}</span><strong>{publicQueueStatus.displayToken}</strong></div></div><p className="queue-ahead"><Users size={18} />{publicQueueStatus.patientsAhead} {t("queue.patientsAhead")}</p><p className="muted">{t("platform.safeQueueNotice")}</p></>}</section></main></div>;
@@ -1724,7 +1749,7 @@ function App() {
           <div className="form-card">
             <div className="form-header">
               <div className="badge">
-                <span>Ã¢â€”Â</span>
+                <span>1</span>
                 {t("letsGetStarted")}
               </div>
               <h2>{t("tellUsAboutYourself")}</h2>
@@ -1821,7 +1846,7 @@ function App() {
 
   if (page === "consent") {
     const allConsentSelected = consent.health && consent.audio && consent.documents;
-    return <div className="auth-page"><Navbar setForm={setForm} showBack onBack={() => setPage("dashboard")} /><main className="consent-card"><p className="eyebrow">{t("platform.carePath")}</p><h1>{t("accessibility.beforeBegin")}</h1><div className="consent-explanation"><p>{t("accessibility.consentDescription")}</p><button type="button" className="read-aloud-button consent-read-button" onClick={toggleConsentReadAloud} aria-pressed={isReadingConsent} aria-label={isReadingConsent ? t("platform.stopReading") : t("platform.readAloud")}><Volume2 size={18} />{isReadingConsent ? t("platform.stopReading") : t("platform.readAloud")}</button></div><div className="consent-select-all"><button type="button" className="btn-secondary" onClick={() => setConsent({ health: !allConsentSelected, audio: !allConsentSelected, documents: !allConsentSelected })}>{allConsentSelected ? t("platform.deselectAll") : t("platform.selectAll")}</button></div><div className="consent-options"><label><input type="checkbox" checked={consent.health} onChange={(e) => setConsent((value) => ({ ...value, health: e.target.checked }))} /> {t("accessibility.healthConsent")}</label><label><input type="checkbox" checked={consent.audio} onChange={(e) => setConsent((value) => ({ ...value, audio: e.target.checked }))} /> {t("accessibility.audioConsent")}</label><label><input type="checkbox" checked={consent.documents} onChange={(e) => setConsent((value) => ({ ...value, documents: e.target.checked }))} /> {t("accessibility.documentConsent")}</label></div>{assessmentError && <p className="auth-error">{assessmentError}</p>}<div className="intake-actions-row"><button type="button" className="btn-secondary" onClick={() => setPage("dashboard")} disabled={creatingAssessment}>{t("accessibility.cancel")}</button><button type="button" className="btn-primary" disabled={!consent.health || creatingAssessment} onClick={startNewAssessment}>{creatingAssessment ? t("platform.startingAssessment") : t("continue")}</button></div></main></div>;
+    return <div className="auth-page"><Navbar setForm={setForm} showBack onBack={() => setPage("dashboard")} /><main className="consent-card"><p className="eyebrow">{t("platform.carePath")}</p><h1>{t("accessibility.beforeBegin")}</h1><div className="consent-explanation"><p>{t("accessibility.consentDescription")}</p><button type="button" className="read-aloud-button consent-read-button" onClick={toggleConsentReadAloud} aria-pressed={isReadingConsent} aria-label={isReadingConsent ? t("platform.stopReading") : t("platform.readAloud")}><Volume2 size={18} />{isReadingConsent ? t("platform.stopReading") : t("platform.readAloud")}</button></div><div className="consent-select-all"><button type="button" className={`btn-secondary ${allConsentSelected ? "selected" : ""}`} onClick={() => setConsent({ health: !allConsentSelected, audio: !allConsentSelected, documents: !allConsentSelected })}>{allConsentSelected ? t("platform.deselectAll") : t("platform.selectAll")}</button></div><div className="consent-options"><label className={consent.health ? "selected" : ""}><input type="checkbox" checked={consent.health} onChange={(e) => setConsent((value) => ({ ...value, health: e.target.checked }))} /> {t("accessibility.healthConsent")}</label><label className={consent.audio ? "selected" : ""}><input type="checkbox" checked={consent.audio} onChange={(e) => setConsent((value) => ({ ...value, audio: e.target.checked }))} /> {t("accessibility.audioConsent")}</label><label className={consent.documents ? "selected" : ""}><input type="checkbox" checked={consent.documents} onChange={(e) => setConsent((value) => ({ ...value, documents: e.target.checked }))} /> {t("accessibility.documentConsent")}</label></div>{assessmentError && <p className="auth-error">{assessmentError}</p>}<div className="intake-actions-row"><button type="button" className="btn-secondary" onClick={() => setPage("dashboard")} disabled={creatingAssessment}>{t("accessibility.cancel")}</button><button type="button" className="btn-primary" disabled={!consent.health || creatingAssessment} onClick={startNewAssessment}>{creatingAssessment ? t("platform.startingAssessment") : t("continue")}</button></div></main></div>;
   }
 
   // =====================================================
@@ -1957,7 +1982,7 @@ function App() {
                 <div className="intake-step-header">
                   <span className="intake-step-badge">
                     {t("intakeFlow.stepBadge2")}{" "}
-                    {selectedSystemObj ? `Ã‚Â· ${t(selectedSystemObj.titleKey)}` : ""}
+                    {selectedSystemObj ? `- ${t(selectedSystemObj.titleKey)}` : ""}
                   </span>
                   <h1 className="intake-step-title">
                     {t("intakeFlow.step2Title")}
@@ -2079,7 +2104,7 @@ function App() {
                         intakeData.severity
                       )}`}
                     >
-                      {intakeData.severity} / 10 Ã‚Â· {getSeverityLabel(intakeData.severity)}
+                      {intakeData.severity} / 10 - {getSeverityLabel(intakeData.severity)}
                     </span>
                   </div>
 
@@ -2094,6 +2119,7 @@ function App() {
                       updateIntakeField("severity", Number(e.target.value))
                     }
                     className="severity-slider"
+                    style={{ "--severity-progress": `${((intakeData.severity - 1) / 9) * 100}%` }}
                     aria-label={t("intakeFlow.severityQuestion")}
                     aria-valuenow={intakeData.severity}
                     aria-valuemin={1}
@@ -2632,7 +2658,7 @@ function App() {
                       <div className="review-item">
                         <span className="review-label">{t("intakeFlow.reviewSeverity")}</span>
                         <span className="review-val">
-                          {intakeData.severity} / 10 ({getSeverityLabel(intakeData.severity)})
+                          {intakeData.severity} / 10 - {getSeverityLabel(intakeData.severity)}
                         </span>
                       </div>
 
@@ -2860,7 +2886,7 @@ function App() {
   }
 
   if (page === "profile") {
-    return <div className="patient-shell">{renderPatientSidebar()}<main className="patient-main patient-section-main"><div className="records-container"><header className="records-header"><div><p className="eyebrow">{t("platform.patientPortal")}</p><h1>{t("auth.profile")}</h1><p>{t("platform.profileDescription")}</p></div><LanguageSwitcher setForm={setForm} /></header><div className="profile-card-grid"><Card><h2>{t("platform.profileInformation")}</h2><p><strong>{t("auth.name")}:</strong> {authenticatedUser?.name || form.name || t("platform.notReported")}</p><p><strong>{t("auth.abha")}:</strong> {maskAbha(authenticatedUser?.abhaId)}</p><p><strong>{t("platform.language")}:</strong> {form.language}</p></Card><Card><h2>{t("accessibility.title")}</h2>{renderAccessibilityControls()}</Card></div></div></main></div>;
+    return <div className="patient-shell">{renderPatientSidebar()}<main className="patient-main patient-section-main"><div className="records-container"><header className="records-header"><div><p className="eyebrow">{t("platform.patientPortal")}</p><h1>{t("auth.profile")}</h1><p>{t("platform.profileDescription")}</p></div><LanguageSwitcher setForm={setForm} /></header><div className="profile-card-grid"><Card><h2>{t("platform.profileInformation")}</h2><p><strong>{t("name")}:</strong> {authenticatedUser?.name || form.name || t("platform.notReported")}</p><p><strong>{t("auth.abha")}:</strong> {maskAbha(authenticatedUser?.abhaId)}</p><p><strong>{t("platform.language")}:</strong> {form.language}</p></Card><Card><h2>Accessibility</h2>{renderAccessibilityControls()}</Card></div></div></main></div>;
   }
 
   if (page === "records") {
@@ -2957,7 +2983,7 @@ function App() {
                     <strong>{doc.name}</strong>
                     <div className="record-sub">
                       <span>{doc.hospital}</span>
-                      <span>Ã¢â‚¬Â¢</span>
+                      <span>-</span>
                       <span>{doc.date}</span>
                     </div>
                   </div>

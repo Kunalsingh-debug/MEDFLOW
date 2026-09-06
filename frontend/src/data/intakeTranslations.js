@@ -292,13 +292,13 @@ export const enIntake = {
   },
 
   intakeFlow: {
-    stepBadge1: "Step 1 Â· Body System",
-    stepBadge2: "Step 2 Â· Symptoms",
-    stepBadge3: "Step 3 Â· Severity & Duration",
-    stepBadge4: "Step 4 Â· Clinical Context",
-    stepBadge5: "Step 5 Â· Medical Documents",
-    stepBadge6: "Step 6 Â· AI Analysis",
-    stepBadge7: "Step 7 Â· Review & Confirm",
+    stepBadge1: "Step 1 - Body System",
+    stepBadge2: "Step 2 - Symptoms",
+    stepBadge3: "Step 3 - Severity & Duration",
+    stepBadge4: "Step 4 - Clinical Context",
+    stepBadge5: "Step 5 - Medical Documents",
+    stepBadge6: "Step 6 - AI Analysis",
+    stepBadge7: "Step 7 - Review & Confirm",
 
     stepLabel1: "System",
     stepLabel2: "Symptoms",
