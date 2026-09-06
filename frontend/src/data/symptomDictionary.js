@@ -1,5 +1,5 @@
 // =====================================================
-// SYMPTOM DICTIONARY — MedX Structured Intake
+// SYMPTOM DICTIONARY â€” MedFlow Structured Intake
 // IDs are stable internal keys used in state & API.
 // titleKey / descKey / symptomKey are i18n translation keys.
 // Color maps to per-system accent color class.

@@ -10,18 +10,18 @@ export default function Navbar({ setForm, onBack, showBack = false }) {
       <div className="navbar-left">
         {showBack && (
           <button className="back-btn" onClick={onBack}>
-            ← {t("back")}
+            â† {t("back")}
           </button>
         )}
 
         <div className="logo">
-          MedX
+          MedFlow
         </div>
       </div>
 
       <div className="navbar-right">
         <span className="secure-badge">
-          🔒 {t("secure")}
+          ðŸ”’ {t("secure")}
         </span>
 
         <LanguageSwitcher setForm={setForm} />
